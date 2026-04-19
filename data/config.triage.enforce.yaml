@@ -1,0 +1,44 @@
+backend:
+  type: openai_compatible
+  base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  api_key: ${DASHSCOPE_API_KEY}
+  timeout_seconds: 30
+  retry_attempts: 3
+  retry_backoff_seconds: 1.0
+
+models:
+  shared_learner_model: ${SHARED_LEARNER_MODEL}
+  tutor_model: ${TUTOR_MODEL}
+  judge_model: ${JUDGE_MODEL}
+  learner_model_overrides:
+    learner_a: ${LEARNER_A_MODEL:-}
+    learner_b: ${LEARNER_B_MODEL:-}
+    learner_c: ${LEARNER_C_MODEL:-}
+
+learners_path: learners.json
+tasks_path: tasks.jsonl
+bundles_path: bundles.json
+output_root: ../outputs
+run_name: sample_api_triage_enforce_run
+seed: 42
+modes:
+  - no_guidance
+  - generic_guidance
+  - adaptive_guidance
+judge_gray_zone: [0.25, 0.75]
+generation:
+  learner_temperature: 0.70
+  tutor_temperature: 0.20
+  feedback_temperature: 0.20
+  judge_temperature: 0.0
+  use_seed: true
+  vary_learner_seed: true
+practice:
+  enabled: true
+  batch_size: 2
+reading_judge_triage:
+  enabled: true
+  mode: enforce
+  model_path: ../models/reading_judge_triage.pt
+  confidence_threshold: 0.95
+  collect_training_data: true
