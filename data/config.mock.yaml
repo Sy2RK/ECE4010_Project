@@ -1,0 +1,32 @@
+backend:
+  type: mock
+  timeout_seconds: 30
+  retry_attempts: 3
+  retry_backoff_seconds: 1.0
+
+models:
+  shared_learner_model: mock-learner
+  tutor_model: mock-tutor
+  judge_model: mock-judge
+  learner_model_overrides:
+    learner_a: mock-learner-a
+    learner_b: mock-learner-b
+    learner_c: mock-learner-c
+
+learners_path: learners.json
+tasks_path: tasks.jsonl
+bundles_path: bundles.json
+output_root: ../outputs
+run_name: sample_mock_run
+seed: 42
+modes:
+  - no_guidance
+  - generic_guidance
+  - adaptive_guidance
+judge_gray_zone: [0.25, 0.75]
+reading_judge_triage:
+  enabled: false
+  mode: shadow
+  model_path: ../models/reading_judge_triage.pt
+  confidence_threshold: 0.90
+  collect_training_data: true

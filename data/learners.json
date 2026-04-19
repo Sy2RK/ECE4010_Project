@@ -1,0 +1,26 @@
+[
+  {
+    "learner_id": "learner_a",
+    "weak_skills": ["grammar", "reading", "vocabulary"],
+    "mid_skills": [],
+    "strong_skills": [],
+    "typical_errors": ["tense_error", "article_error", "detail_missing"],
+    "answer_style": "short and often uncertain"
+  },
+  {
+    "learner_id": "learner_b",
+    "weak_skills": ["grammar"],
+    "mid_skills": ["reading", "vocabulary"],
+    "strong_skills": [],
+    "typical_errors": ["tense_error", "article_error", "sva_error"],
+    "answer_style": "short but tries to fix grammar carefully"
+  },
+  {
+    "learner_id": "learner_c",
+    "weak_skills": ["reading"],
+    "mid_skills": ["grammar", "vocabulary"],
+    "strong_skills": [],
+    "typical_errors": ["detail_missing", "answer_mismatch", "low_keyword_overlap"],
+    "answer_style": "answers briefly and may miss key evidence"
+  }
+]
