@@ -46,7 +46,7 @@ class MockBackend(LLMBackend):
         phase = meta["phase"]
         focus_skill = meta.get("focus_skill")
         guidance_text = meta.get("guidance_text", "")
-        seed_key = mode if phase == "posttest" else "shared_pretest"
+        seed_key = mode if phase in {"practice", "posttest"} else "shared_pretest"
         rng = random.Random(
             deterministic_seed(seed, learner.learner_id, task.task_id, seed_key, phase)
         )
@@ -54,7 +54,7 @@ class MockBackend(LLMBackend):
         base_level = self._skill_level(learner, primary_skill)
         difficulty_penalty = 0.08 * (task.difficulty - 1)
         mode_bonus = 0.0
-        if phase == "posttest":
+        if phase in {"practice", "posttest"}:
             mode_bonus += MODE_BONUS.get(mode, 0.0)
             if focus_skill == primary_skill:
                 mode_bonus += 0.12

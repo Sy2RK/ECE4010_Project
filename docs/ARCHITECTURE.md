@@ -360,6 +360,7 @@ Config includes:
 - random seed
 - enabled guidance modes
 - judge gray zone
+- intermediate practice settings
 - optional reading judge triage settings
 
 Environment variables can be injected into YAML using `${VAR}` or `${VAR:-default}` syntax.
@@ -379,12 +380,16 @@ The learner model used at runtime is resolved in this order:
 - pretest is run
 - learner state is still computed for logging
 - no tutor plan is generated
+- no intermediate practice is run
 - no feedback is passed into posttest
 
 ### `generic_guidance`
 
 - pretest is run
-- a fixed, non-personalized hint is passed before posttest
+- a fixed, non-personalized hint is generated
+- deterministic practice tasks are selected from reserve items, without learner-state adaptation
+- practice responses are scored and recorded, but not included in final metrics
+- a generic practice reminder is passed before posttest
 - no adaptive plan is generated
 
 ### `adaptive_guidance`
@@ -393,8 +398,17 @@ The learner model used at runtime is resolved in this order:
 - learner state is computed
 - tutor plan is generated
 - per-item feedback is recorded
-- compact adaptive guidance is passed into posttest
 - next practice tasks are recommended
+- recommended practice tasks are answered and scored before posttest
+- practice feedback is summarized into the posttest prompt
+- compact adaptive guidance is passed into posttest
+
+The intermediate practice phase is deliberately non-scored for experiment metrics.
+`round1_score`, `round2_score`, and `score_delta` still come only from fixed pretest
+and fixed posttest bundles. Practice exists to make guidance operational in a
+stateless LLM setup: the system must pass a compact summary of practice feedback
+into the subsequent learner prompt, otherwise separate API calls would not share
+learning context.
 
 ## 8. Experiment Artifacts
 

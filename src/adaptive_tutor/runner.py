@@ -197,6 +197,56 @@ class ExperimentRunner:
             triage_callback=triage_callback,
         )
 
+    def _select_generic_practice_tasks(
+        self,
+        task_type: str,
+        exclude_task_ids: set[str],
+        batch_size: int,
+    ) -> list[Task]:
+        candidates = [
+            task
+            for task in self.tasks.values()
+            if task.task_type == task_type and task.task_id not in exclude_task_ids
+        ]
+        candidates.sort(key=lambda task: (abs(task.difficulty - 2), task.task_id))
+        return candidates[:batch_size]
+
+    @staticmethod
+    def _compose_post_guidance(
+        mode: GuidanceMode,
+        task_type: str,
+        base_guidance: str,
+        practice_feedback_texts: list[str],
+    ) -> str:
+        if not practice_feedback_texts:
+            return base_guidance
+        if mode == "adaptive_guidance":
+            if task_type == "reading_qa":
+                practice_summary = (
+                    "Practice summary: use only the current passage, do not reuse names or "
+                    "details from earlier practice tasks, and include the full cause/evidence "
+                    "chain required by the current question."
+                )
+            else:
+                practice_summary = (
+                    "Practice summary: correct every grammar issue in the current sentence, "
+                    "especially agreement, pronouns, tense, articles, and prepositions."
+                )
+            return "\n\n".join(
+                [
+                    base_guidance,
+                    practice_summary,
+                ]
+            )
+        if mode == "generic_guidance":
+            return "\n\n".join(
+                [
+                    base_guidance,
+                    "Practice reminder: apply the same checklist carefully in the next test.",
+                ]
+            )
+        return base_guidance
+
     @staticmethod
     def _scoring_fields(evaluation: EvaluationResult) -> dict:
         return {
@@ -264,6 +314,8 @@ class ExperimentRunner:
                     phase_feedback: list[FeedbackRecord] = []
                     pretest_records: list[InteractionRecord] = []
                     pretest_evaluations: dict[str, EvaluationResult] = {}
+                    practice_records: list[InteractionRecord] = []
+                    practice_feedback_texts: list[str] = []
 
                     for task_id in pre_ids:
                         task = self.tasks[task_id]
@@ -366,6 +418,91 @@ class ExperimentRunner:
                             append_jsonl(run_dir / "feedback.jsonl", feedback_record)
                             phase_feedback.append(feedback_record)
 
+                    practice_tasks: list[Task] = []
+                    if self.config.practice.enabled and self.config.practice.batch_size > 0:
+                        excluded_ids = set(pre_ids) | set(post_ids)
+                        if mode == "adaptive_guidance" and adaptive_plan:
+                            practice_tasks = recommended_tasks[: self.config.practice.batch_size]
+                        elif mode == "generic_guidance":
+                            practice_tasks = self._select_generic_practice_tasks(
+                                task_type,
+                                excluded_ids,
+                                self.config.practice.batch_size,
+                            )
+
+                    for task in practice_tasks:
+                        answer = self._answer_task(
+                            learner,
+                            task,
+                            mode,
+                            phase="practice",
+                            guidance_text=guidance_text,
+                            focus_skill=adaptive_plan.focus_skill if adaptive_plan else None,
+                        )
+                        evaluation = self._score_answer(task, answer)
+                        training_row = self._triage_training_row(
+                            learner_id, mode, "practice", task, answer, evaluation
+                        )
+                        if training_row:
+                            triage_training_rows.append(training_row)
+                            append_jsonl(run_dir / "triage_training.jsonl", training_row)
+                        tracker.update(task, evaluation)
+                        record = InteractionRecord(
+                            interaction_id=f"{learner_id}-{mode}-{task.task_id}-practice",
+                            learner_id=learner_id,
+                            task_id=task.task_id,
+                            task_type=task.task_type,
+                            difficulty=task.difficulty,
+                            response_text=answer,
+                            score=evaluation.score,
+                            error_tags=evaluation.error_tags,
+                            guidance_mode=mode,
+                            round_index=1,
+                            phase="practice",
+                            evaluator_note=evaluation.evaluator_note,
+                            **self._scoring_fields(evaluation),
+                        )
+                        interactions.append(record)
+                        append_jsonl(run_dir / "interactions.jsonl", record)
+                        practice_records.append(record)
+                        if mode == "adaptive_guidance" and adaptive_plan:
+                            feedback_record = generate_feedback_record(
+                                backend=self.backend,
+                                model=self.config.models.tutor_model,
+                                learner_id=learner_id,
+                                guidance_mode=mode,
+                                task=task,
+                                learner_answer=answer,
+                                evaluation=evaluation,
+                                plan=adaptive_plan,
+                                recommended_task_ids=[item.task_id for item in recommended_tasks],
+                                seed=self.config.seed if self.config.generation.use_seed else None,
+                                temperature=self.config.generation.feedback_temperature,
+                            )
+                        else:
+                            feedback_record = FeedbackRecord(
+                                learner_id=learner_id,
+                                task_id=task.task_id,
+                                task_type=task_type,
+                                guidance_mode=mode,
+                                round_index=1,
+                                feedback_style="generic_guidance",
+                                feedback_text=guidance_text,
+                                next_task_recommendation=[],
+                                focus_skill=None,
+                            )
+                        feedback_records.append(feedback_record)
+                        append_jsonl(run_dir / "feedback.jsonl", feedback_record)
+                        phase_feedback.append(feedback_record)
+                        practice_feedback_texts.append(feedback_record.feedback_text)
+
+                    guidance_text = self._compose_post_guidance(
+                        mode,
+                        task_type,
+                        guidance_text,
+                        practice_feedback_texts,
+                    )
+
                     posttest_records: list[InteractionRecord] = []
                     for task_id in post_ids:
                         task = self.tasks[task_id]
@@ -439,6 +576,9 @@ class ExperimentRunner:
                                 "recommended_task_ids": [task.task_id for task in recommended_tasks],
                                 "feedback_excerpt": phase_feedback[0].feedback_text,
                                 "pretest_examples": [record.model_dump() for record in pretest_records],
+                                "practice_examples": [
+                                    record.model_dump() for record in practice_records
+                                ],
                                 "posttest_examples": [record.model_dump() for record in posttest_records],
                             }
                         )

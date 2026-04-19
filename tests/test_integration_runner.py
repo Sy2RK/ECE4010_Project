@@ -47,9 +47,15 @@ def test_mock_runner_creates_reproducible_artifacts(tmp_path: Path) -> None:
 
     grouped_pre = {}
     grouped_post = {}
+    grouped_practice = {}
     for record in artifacts.interactions:
         key = (record.learner_id, record.task_type, record.guidance_mode)
-        target = grouped_pre if record.phase == "pretest" else grouped_post
+        if record.phase == "pretest":
+            target = grouped_pre
+        elif record.phase == "posttest":
+            target = grouped_post
+        else:
+            target = grouped_practice
         target.setdefault(key, []).append(record.task_id)
 
     for learner_id in {"learner_a", "learner_b", "learner_c"}:
@@ -64,6 +70,9 @@ def test_mock_runner_creates_reproducible_artifacts(tmp_path: Path) -> None:
             }
             assert len(pre_sets) == 1
             assert len(post_sets) == 1
+            assert (learner_id, task_type, "no_guidance") not in grouped_practice
+            assert grouped_practice[(learner_id, task_type, "generic_guidance")]
+            assert grouped_practice[(learner_id, task_type, "adaptive_guidance")]
 
 
 def test_case_selection_is_deterministic_and_score_first() -> None:

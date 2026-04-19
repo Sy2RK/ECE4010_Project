@@ -33,6 +33,9 @@ generation:
   judge_temperature: 0.0
   use_seed: true
   vary_learner_seed: true
+practice:
+  enabled: true
+  batch_size: 2
 reading_judge_triage:
   enabled: false
   mode: shadow

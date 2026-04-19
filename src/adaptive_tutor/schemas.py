@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 TaskType = Literal["grammar_correction", "reading_qa"]
 GuidanceMode = Literal["no_guidance", "generic_guidance", "adaptive_guidance"]
-InteractionPhase = Literal["pretest", "posttest"]
+InteractionPhase = Literal["pretest", "practice", "posttest"]
 FeedbackStyle = Literal[
     "concise_correction",
     "correction_brief_explanation",
@@ -146,6 +146,13 @@ class GenerationConfig(BaseModel):
     vary_learner_seed: bool = True
 
 
+class PracticeConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = True
+    batch_size: int = Field(default=2, ge=0, le=5)
+
+
 class AppConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -169,6 +176,7 @@ class AppConfig(BaseModel):
         default_factory=ReadingJudgeTriageConfig
     )
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
+    practice: PracticeConfig = Field(default_factory=PracticeConfig)
 
     @model_validator(mode="after")
     def validate_gray_zone(self) -> "AppConfig":

@@ -45,6 +45,11 @@ python -m adaptive_tutor run-experiment --config data/config.mock.yaml
 Both modes create a run directory under `outputs/` with JSONL artifacts, CSV metrics,
 and a Markdown report.
 
+The experiment flow is `pretest -> guidance/practice -> posttest`. The intermediate
+practice phase is enabled by default for `generic_guidance` and `adaptive_guidance`;
+practice interactions are recorded and can update learner state, but final metrics
+still compare only the fixed pretest/posttest bundles.
+
 The API backend retries transient provider failures with exponential backoff. Run
 artifacts are incrementally flushed to JSONL files during execution, so completed
 interactions are preserved even if a later API call fails.

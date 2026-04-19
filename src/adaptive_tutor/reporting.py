@@ -111,6 +111,8 @@ def build_report_text(artifacts: RunArtifacts) -> str:
 
     case_lines: list[str] = []
     for index, case in enumerate(artifacts.cases, start=1):
+        practice_examples = case.get("practice_examples", [])
+        practice_task_ids = [record["task_id"] for record in practice_examples]
         case_lines.extend(
             [
                 f"### Case {index}: {case['learner_id']} / {case['task_type']}",
@@ -122,6 +124,7 @@ def build_report_text(artifacts: RunArtifacts) -> str:
                 ),
                 f"- Tutor focus: {case['tutoring_plan']['focus_skill']}",
                 f"- Recommended tasks: {', '.join(case['recommended_task_ids']) or 'none'}",
+                f"- Practice tasks used before posttest: {', '.join(practice_task_ids) or 'none'}",
                 f"- Feedback excerpt: {case['feedback_excerpt']}",
                 "",
             ]
@@ -133,6 +136,7 @@ def build_report_text(artifacts: RunArtifacts) -> str:
         "",
         "## Overall Summary",
         f"本次运行共完成 {total_runs} 个子实验，覆盖 {len(learner_ids)} 个 learners、{len(modes)} 种 guidance modes、{len(task_types)} 种 task types。",
+        "pretest/posttest 仍使用固定题组；generic/adaptive guidance 在中间增加非计分 practice phase，practice 结果只用于后续提示和 learner state 更新，不进入 score_delta。",
         "",
         _markdown_table(["mode", "avg_round1", "avg_round2", "avg_delta"], overall_rows),
         "",
