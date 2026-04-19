@@ -105,6 +105,8 @@ def load_tasks(path: str | Path) -> dict[str, Task]:
             if not line.strip():
                 continue
             task = Task.model_validate_json(line)
+            if task.task_id in tasks:
+                raise ValueError(f"Duplicate task_id in {path}: {task.task_id}")
             tasks[task.task_id] = task
     return tasks
 
@@ -112,7 +114,12 @@ def load_tasks(path: str | Path) -> dict[str, Task]:
 def load_learners(path: str | Path) -> dict[str, LearnerProfile]:
     payload = load_json(path)
     learners = [LearnerProfile.model_validate(item) for item in payload]
-    return {learner.learner_id: learner for learner in learners}
+    learner_map: dict[str, LearnerProfile] = {}
+    for learner in learners:
+        if learner.learner_id in learner_map:
+            raise ValueError(f"Duplicate learner_id in {path}: {learner.learner_id}")
+        learner_map[learner.learner_id] = learner
+    return learner_map
 
 
 def load_bundle_catalog(path: str | Path) -> BundleCatalog:

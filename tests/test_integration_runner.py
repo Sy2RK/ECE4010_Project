@@ -10,6 +10,7 @@ import adaptive_tutor.runner as runner_module
 from adaptive_tutor.reporting import load_run_artifacts
 from adaptive_tutor.runner import ExperimentRunner
 from adaptive_tutor.runner import run_experiment
+from adaptive_tutor.schemas import InteractionRecord, LearnerState, RecentErrorSummary, StateVector
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -48,10 +49,15 @@ def test_mock_runner_creates_reproducible_artifacts(tmp_path: Path) -> None:
     grouped_pre = {}
     grouped_post = {}
     grouped_practice = {}
+    pretest_by_item = {}
     for record in artifacts.interactions:
         key = (record.learner_id, record.task_type, record.guidance_mode)
         if record.phase == "pretest":
             target = grouped_pre
+            pretest_by_item.setdefault(
+                (record.learner_id, record.task_type, record.task_id),
+                [],
+            ).append(record)
         elif record.phase == "posttest":
             target = grouped_post
         else:
@@ -73,6 +79,48 @@ def test_mock_runner_creates_reproducible_artifacts(tmp_path: Path) -> None:
             assert (learner_id, task_type, "no_guidance") not in grouped_practice
             assert grouped_practice[(learner_id, task_type, "generic_guidance")]
             assert grouped_practice[(learner_id, task_type, "adaptive_guidance")]
+    for records in pretest_by_item.values():
+        assert len({record.response_text for record in records}) == 1
+        assert len({record.score for record in records}) == 1
+
+
+def test_adaptive_post_guidance_uses_sanitized_practice_outcome() -> None:
+    state = LearnerState(
+        learner_id="learner_c",
+        state_vector=StateVector(grammar=0.6, vocabulary=0.5, reading=0.4, confidence=0.5),
+        recent_error_summary=RecentErrorSummary(
+            top_errors=["missing_key_evidence"],
+            weakest_skill="reading",
+        ),
+    )
+    practice_record = InteractionRecord(
+        interaction_id="learner_c-adaptive_guidance-r9-practice",
+        learner_id="learner_c",
+        task_id="r9",
+        task_type="reading_qa",
+        difficulty=2,
+        response_text="Survey answer",
+        score=0.5,
+        error_tags=["missing_key_evidence"],
+        guidance_mode="adaptive_guidance",
+        round_index=1,
+        phase="practice",
+    )
+
+    guidance = ExperimentRunner._compose_post_guidance(
+        "adaptive_guidance",
+        "reading_qa",
+        "Adaptive guidance:",
+        [practice_record],
+        state,
+    )
+
+    assert "Practice average score: 0.50" in guidance
+    assert "Practice feedback lesson 1: score 0.50" in guidance
+    assert "missing_key_evidence" in guidance
+    assert "Weakest skill after practice: reading." in guidance
+    assert "use only the current passage" in guidance
+    assert "Survey answer" not in guidance
 
 
 def test_case_selection_is_deterministic_and_score_first() -> None:

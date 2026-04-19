@@ -36,6 +36,7 @@ from adaptive_tutor.schemas import (
     GuidanceMode,
     InteractionRecord,
     JudgeDecision,
+    LearnerState,
     LearnerProfile,
     PlanRecord,
     RunArtifacts,
@@ -159,11 +160,12 @@ class ExperimentRunner:
         if self.config.generation.use_seed:
             learner_seed = self.config.seed
             if self.config.generation.vary_learner_seed:
+                mode_seed_component = "baseline" if phase == "pretest" else mode
                 learner_seed = deterministic_seed(
                     self.config.seed,
                     learner.learner_id,
                     task.task_id,
-                    mode,
+                    mode_seed_component,
                     phase,
                 ) % 2_147_483_647
         return self.backend.generate(
@@ -216,25 +218,70 @@ class ExperimentRunner:
         mode: GuidanceMode,
         task_type: str,
         base_guidance: str,
-        practice_feedback_texts: list[str],
+        practice_records: list[InteractionRecord],
+        post_practice_state: LearnerState | None,
     ) -> str:
-        if not practice_feedback_texts:
+        if not practice_records:
             return base_guidance
         if mode == "adaptive_guidance":
+            avg_practice_score = average(record.score for record in practice_records)
+            practice_error_tags = sorted(
+                {
+                    error_tag
+                    for record in practice_records
+                    for error_tag in record.error_tags
+                }
+            )
+            state_lines: list[str] = []
+            if post_practice_state:
+                state_lines = [
+                    (
+                        "Weakest skill after practice: "
+                        f"{post_practice_state.recent_error_summary.weakest_skill}."
+                    ),
+                    (
+                        "Recurring error tags after practice: "
+                        f"{', '.join(post_practice_state.recent_error_summary.top_errors) or 'none'}."
+                    ),
+                ]
+            lesson_lines = []
+            for index, record in enumerate(practice_records[:2], start=1):
+                errors = ", ".join(record.error_tags[:3]) or "none"
+                if task_type == "reading_qa":
+                    lesson = (
+                        f"Practice feedback lesson {index}: score {record.score:.2f}; "
+                        f"errors {errors}; for the next answer, include all required evidence "
+                        "from the current passage only."
+                    )
+                else:
+                    lesson = (
+                        f"Practice feedback lesson {index}: score {record.score:.2f}; "
+                        f"errors {errors}; for the next answer, re-check the current sentence "
+                        "for the same error categories."
+                    )
+                lesson_lines.append(lesson)
+            practice_lines = [
+                "Adaptive practice outcome summary. Use this as learning history, not as task content:",
+                f"Practice average score: {avg_practice_score:.2f}.",
+                f"Practice error tags: {', '.join(practice_error_tags[:5]) or 'none'}.",
+                *state_lines,
+                *lesson_lines,
+            ]
             if task_type == "reading_qa":
                 practice_summary = (
-                    "Practice summary: use only the current passage, do not reuse names or "
-                    "details from earlier practice tasks, and include the full cause/evidence "
-                    "chain required by the current question."
+                    "For the next Reading QA item, use only the current passage, do not "
+                    "reuse names or details from earlier practice tasks, and include the "
+                    "full cause/evidence chain required by the current question."
                 )
             else:
                 practice_summary = (
-                    "Practice summary: correct every grammar issue in the current sentence, "
+                    "For the next Grammar Correction item, correct every grammar issue in the current sentence, "
                     "especially agreement, pronouns, tense, articles, and prepositions."
                 )
             return "\n\n".join(
                 [
                     base_guidance,
+                    "\n".join(practice_lines),
                     practice_summary,
                 ]
             )
@@ -315,7 +362,6 @@ class ExperimentRunner:
                     pretest_records: list[InteractionRecord] = []
                     pretest_evaluations: dict[str, EvaluationResult] = {}
                     practice_records: list[InteractionRecord] = []
-                    practice_feedback_texts: list[str] = []
 
                     for task_id in pre_ids:
                         task = self.tasks[task_id]
@@ -494,13 +540,14 @@ class ExperimentRunner:
                         feedback_records.append(feedback_record)
                         append_jsonl(run_dir / "feedback.jsonl", feedback_record)
                         phase_feedback.append(feedback_record)
-                        practice_feedback_texts.append(feedback_record.feedback_text)
 
+                    post_practice_state = tracker.snapshot() if practice_records else None
                     guidance_text = self._compose_post_guidance(
                         mode,
                         task_type,
                         guidance_text,
-                        practice_feedback_texts,
+                        practice_records,
+                        post_practice_state,
                     )
 
                     posttest_records: list[InteractionRecord] = []
@@ -572,6 +619,11 @@ class ExperimentRunner:
                                 "round2_score": round2_score,
                                 "score_delta": metric.score_delta,
                                 "learner_state": pretest_state.model_dump(),
+                                "post_practice_state": (
+                                    post_practice_state.model_dump()
+                                    if post_practice_state
+                                    else None
+                                ),
                                 "tutoring_plan": adaptive_plan.model_dump(),
                                 "recommended_task_ids": [task.task_id for task in recommended_tasks],
                                 "feedback_excerpt": phase_feedback[0].feedback_text,

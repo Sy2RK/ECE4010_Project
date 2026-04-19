@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -106,3 +107,44 @@ def test_required_model_names_must_not_be_empty() -> None:
                 "bundles_path": "bundles.json",
             }
         )
+
+
+def test_modes_must_be_non_empty_and_unique() -> None:
+    base_payload = {
+        "backend": {"type": "mock"},
+        "models": {
+            "shared_learner_model": "mock-learner",
+            "tutor_model": "mock-tutor",
+            "judge_model": "mock-judge",
+        },
+        "learners_path": "learners.json",
+        "tasks_path": "tasks.jsonl",
+        "bundles_path": "bundles.json",
+    }
+    with pytest.raises(ValidationError):
+        AppConfig.model_validate({**base_payload, "modes": []})
+    with pytest.raises(ValidationError, match="modes must be unique"):
+        AppConfig.model_validate(
+            {**base_payload, "modes": ["no_guidance", "no_guidance"]}
+        )
+
+
+def test_load_tasks_rejects_duplicate_task_id(tmp_path: Path) -> None:
+    first_task_line = (ROOT / "data" / "tasks.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    tasks_path = tmp_path / "tasks.jsonl"
+    tasks_path.write_text(f"{first_task_line}\n{first_task_line}\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Duplicate task_id"):
+        load_tasks(tasks_path)
+
+
+def test_load_learners_rejects_duplicate_learner_id(tmp_path: Path) -> None:
+    learners = json.loads((ROOT / "data" / "learners.json").read_text(encoding="utf-8"))
+    learners_path = tmp_path / "learners.json"
+    learners_path.write_text(
+        json.dumps([learners[0], learners[0]], ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Duplicate learner_id"):
+        load_learners(learners_path)

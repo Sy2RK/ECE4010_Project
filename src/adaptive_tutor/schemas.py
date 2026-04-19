@@ -169,7 +169,8 @@ class AppConfig(BaseModel):
             "no_guidance",
             "generic_guidance",
             "adaptive_guidance",
-        ]
+        ],
+        min_length=1,
     )
     judge_gray_zone: tuple[float, float] = (0.25, 0.75)
     reading_judge_triage: ReadingJudgeTriageConfig = Field(
@@ -177,6 +178,13 @@ class AppConfig(BaseModel):
     )
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     practice: PracticeConfig = Field(default_factory=PracticeConfig)
+
+    @field_validator("modes")
+    @classmethod
+    def validate_unique_modes(cls, value: list[GuidanceMode]) -> list[GuidanceMode]:
+        if len(value) != len(set(value)):
+            raise ValueError("modes must be unique")
+        return value
 
     @model_validator(mode="after")
     def validate_gray_zone(self) -> "AppConfig":
