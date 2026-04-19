@@ -1,9 +1,9 @@
 {
   "bundle_definitions": {
-    "grammar_pre": ["g1", "g3", "g5", "g7"],
-    "grammar_post": ["g2", "g4", "g6", "g8"],
-    "reading_pre": ["r1", "r3", "r5", "r7"],
-    "reading_post": ["r2", "r4", "r6", "r8"]
+    "grammar_pre": ["g10", "g5", "g6", "g9"],
+    "grammar_post": ["g2", "g3", "g4", "g8"],
+    "reading_pre": ["r1", "r10", "r6", "r7"],
+    "reading_post": ["r2", "r3", "r5", "r8"]
   },
   "assignments": {
     "learner_a": {
