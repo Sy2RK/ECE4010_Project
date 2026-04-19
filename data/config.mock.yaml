@@ -24,6 +24,13 @@ modes:
   - generic_guidance
   - adaptive_guidance
 judge_gray_zone: [0.25, 0.75]
+generation:
+  learner_temperature: 0.70
+  tutor_temperature: 0.20
+  feedback_temperature: 0.20
+  judge_temperature: 0.0
+  use_seed: true
+  vary_learner_seed: true
 reading_judge_triage:
   enabled: false
   mode: shadow

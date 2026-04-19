@@ -247,3 +247,69 @@ def test_runner_flushes_interactions_incrementally_on_failure(
     interactions_path = tmp_path / "partial_run" / "interactions.jsonl"
     assert interactions_path.exists()
     assert len(interactions_path.read_text(encoding="utf-8").splitlines()) == 1
+
+
+def test_runner_passes_role_specific_generation_settings(tmp_path: Path) -> None:
+    sample_config_path = ROOT / "data" / "config.mock.yaml"
+    with sample_config_path.open("r", encoding="utf-8") as handle:
+        payload = yaml.safe_load(handle)
+    payload["learners_path"] = str((ROOT / "data" / "learners.json").resolve())
+    payload["tasks_path"] = str((ROOT / "data" / "tasks.jsonl").resolve())
+    payload["bundles_path"] = str((ROOT / "data" / "bundles.json").resolve())
+    payload["output_root"] = str(tmp_path)
+    payload["run_name"] = "generation_settings"
+    payload["generation"] = {
+        "learner_temperature": 0.7,
+        "tutor_temperature": 0.2,
+        "feedback_temperature": 0.3,
+        "judge_temperature": 0.0,
+        "use_seed": True,
+        "vary_learner_seed": True,
+    }
+    runner = ExperimentRunner(runner_module.load_config(_write_temp_config(tmp_path, payload)))
+    calls = []
+
+    def fake_generate(messages, model, response_format=None, seed=None, temperature=None, metadata=None):
+        calls.append(
+            {
+                "role": (metadata or {}).get("role"),
+                "seed": seed,
+                "temperature": temperature,
+                "response_format": response_format,
+            }
+        )
+        role = (metadata or {}).get("role")
+        if role == "learner":
+            task = metadata["task"]
+            if task["task_type"] == "reading_qa":
+                return "partial answer"
+            return task["reference_answer"]
+        if role == "judge":
+            return '{"score": 1.0, "note": "ok"}'
+        if role == "tutor_planner":
+            return (
+                '{"focus_skill":"grammar","focus_subskills":["tense"],'
+                '"recommended_difficulty":2,'
+                '"feedback_style":"concise_correction",'
+                '"hint_level":"low",'
+                '"next_task_type":"grammar_correction",'
+                '"next_batch_size":1,'
+                '"adaptation_rationale":"test"}'
+            )
+        if role == "feedback":
+            return "Short feedback."
+        return ""
+
+    runner.backend.generate = fake_generate
+
+    runner.run()
+
+    learner_calls = [call for call in calls if call["role"] == "learner"]
+    judge_calls = [call for call in calls if call["role"] == "judge"]
+    assert learner_calls
+    assert all(call["temperature"] == 0.7 for call in learner_calls)
+    assert len({call["seed"] for call in learner_calls[:4]}) > 1
+    assert all(0 <= call["seed"] < 2_147_483_647 for call in learner_calls)
+    assert judge_calls
+    assert all(call["temperature"] == 0.0 for call in judge_calls)
+    assert all(call["seed"] == 42 for call in judge_calls)

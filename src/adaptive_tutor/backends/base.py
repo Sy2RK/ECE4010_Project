@@ -14,6 +14,7 @@ class LLMBackend(ABC):
         model: str,
         response_format: dict[str, Any] | None = None,
         seed: int | None = None,
+        temperature: float | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> str:
         raise NotImplementedError

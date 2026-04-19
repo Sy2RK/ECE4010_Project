@@ -43,7 +43,7 @@ from adaptive_tutor.schemas import (
     Task,
 )
 from adaptive_tutor.triage import ReadingJudgeTriageRuntime
-from adaptive_tutor.utils import average, parse_json_object
+from adaptive_tutor.utils import average, deterministic_seed, parse_json_object
 
 TASK_TYPES = ("grammar_correction", "reading_qa")
 
@@ -122,7 +122,8 @@ class ExperimentRunner:
             messages=messages,
             model=self.config.models.judge_model,
             response_format={"type": "json_object"},
-            seed=self.config.seed,
+            seed=self.config.seed if self.config.generation.use_seed else None,
+            temperature=self.config.generation.judge_temperature,
             metadata={
                 "role": "judge",
                 "rule_score": rule_score,
@@ -154,11 +155,23 @@ class ExperimentRunner:
                 "content": "\n\n".join(part for part in [guidance_text, render_task(task)] if part),
             },
         ]
+        learner_seed = None
+        if self.config.generation.use_seed:
+            learner_seed = self.config.seed
+            if self.config.generation.vary_learner_seed:
+                learner_seed = deterministic_seed(
+                    self.config.seed,
+                    learner.learner_id,
+                    task.task_id,
+                    mode,
+                    phase,
+                ) % 2_147_483_647
         return self.backend.generate(
             messages=messages,
             model=model,
             response_format=None,
-            seed=self.config.seed,
+            seed=learner_seed,
+            temperature=self.config.generation.learner_temperature,
             metadata={
                 "role": "learner",
                 "learner": learner.model_dump(),
@@ -301,7 +314,8 @@ class ExperimentRunner:
                             model=self.config.models.tutor_model,
                             learner_state=pretest_state,
                             task_type=task_type,
-                            seed=self.config.seed,
+                            seed=self.config.seed if self.config.generation.use_seed else None,
+                            temperature=self.config.generation.tutor_temperature,
                         )
                         excluded_ids = set(pre_ids) | set(post_ids)
                         recommended_tasks = recommend_tasks(self.tasks, adaptive_plan, excluded_ids)
@@ -327,7 +341,8 @@ class ExperimentRunner:
                                 evaluation=pretest_evaluations[task.task_id],
                                 plan=adaptive_plan,
                                 recommended_task_ids=[task.task_id for task in recommended_tasks],
-                                seed=self.config.seed,
+                                seed=self.config.seed if self.config.generation.use_seed else None,
+                                temperature=self.config.generation.feedback_temperature,
                             )
                             feedback_records.append(feedback_record)
                             append_jsonl(run_dir / "feedback.jsonl", feedback_record)

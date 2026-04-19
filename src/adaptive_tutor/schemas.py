@@ -135,6 +135,17 @@ class ReadingJudgeTriageConfig(BaseModel):
     collect_training_data: bool = True
 
 
+class GenerationConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    learner_temperature: float = Field(default=0.70, ge=0, le=2)
+    tutor_temperature: float = Field(default=0.20, ge=0, le=2)
+    feedback_temperature: float = Field(default=0.20, ge=0, le=2)
+    judge_temperature: float = Field(default=0.0, ge=0, le=2)
+    use_seed: bool = True
+    vary_learner_seed: bool = True
+
+
 class AppConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -157,6 +168,7 @@ class AppConfig(BaseModel):
     reading_judge_triage: ReadingJudgeTriageConfig = Field(
         default_factory=ReadingJudgeTriageConfig
     )
+    generation: GenerationConfig = Field(default_factory=GenerationConfig)
 
     @model_validator(mode="after")
     def validate_gray_zone(self) -> "AppConfig":

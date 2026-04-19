@@ -27,7 +27,8 @@ def generate_feedback_record(
     evaluation: EvaluationResult,
     plan: TutoringPlan,
     recommended_task_ids: list[str],
-    seed: int,
+    seed: int | None,
+    temperature: float | None = None,
 ) -> FeedbackRecord:
     messages = build_feedback_messages(
         task=task,
@@ -41,6 +42,7 @@ def generate_feedback_record(
         model=model,
         response_format=None,
         seed=seed,
+        temperature=temperature,
         metadata={
             "role": "feedback",
             "plan": plan.model_dump(),

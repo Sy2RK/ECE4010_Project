@@ -41,13 +41,16 @@ class OpenAICompatibleBackend(LLMBackend):
         model: str,
         response_format: dict[str, Any] | None = None,
         seed: int | None = None,
+        temperature: float | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> str:
         role = (metadata or {}).get("role")
+        if temperature is None:
+            temperature = 0.0 if role == "judge" else 0.2
         request: dict[str, Any] = {
             "model": model,
             "messages": messages,
-            "temperature": 0.0 if role == "judge" else 0.2,
+            "temperature": temperature,
             "extra_body": {"enable_thinking": False},
         }
         if seed is not None:

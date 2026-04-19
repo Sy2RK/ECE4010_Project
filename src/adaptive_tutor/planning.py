@@ -71,7 +71,8 @@ def generate_tutoring_plan(
     model: str,
     learner_state: LearnerState,
     task_type: TaskType,
-    seed: int,
+    seed: int | None,
+    temperature: float | None = None,
 ) -> TutoringPlan:
     messages = build_tutor_plan_messages(learner_state, task_type, ["grammar_correction", "reading_qa"])
     raw_text = backend.generate(
@@ -79,6 +80,7 @@ def generate_tutoring_plan(
         model=model,
         response_format={"type": "json_object"},
         seed=seed,
+        temperature=temperature,
         metadata={
             "role": "tutor_planner",
             "learner_state": learner_state.model_dump(),
