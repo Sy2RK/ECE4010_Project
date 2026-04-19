@@ -57,7 +57,12 @@ interactions are preserved even if a later API call fails.
 ### Reading judge triage
 
 The project can optionally use a local PyTorch GRU triage model before calling the
-LLM judge for Reading QA gray-zone answers. This is disabled by default.
+LLM judge for Reading QA gray-zone answers. The default API config enables triage
+in conservative `enforce` mode and uses `models/reading_judge_triage.pt` when the
+checkpoint exists. If the checkpoint is missing or cannot be loaded, the system
+automatically falls back to the normal LLM judge path.
+
+To rebuild the local checkpoint:
 
 1. Run shadow mode to collect judge-labeled training rows:
 
@@ -72,6 +77,15 @@ python -m adaptive_tutor train-reading-triage --runs outputs/sample_api_triage_r
 ```
 
 3. Change `reading_judge_triage.mode` to `enforce` after shadow validation is acceptable.
+
+The default API config already uses:
+
+```yaml
+reading_judge_triage:
+  enabled: true
+  mode: enforce
+  confidence_threshold: 0.95
+```
 
 Triage artifacts:
 - `triage_training.jsonl`: judge-labeled GRU training rows

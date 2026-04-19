@@ -37,8 +37,8 @@ practice:
   enabled: true
   batch_size: 2
 reading_judge_triage:
-  enabled: false
-  mode: shadow
+  enabled: true
+  mode: enforce
   model_path: ../models/reading_judge_triage.pt
-  confidence_threshold: 0.90
+  confidence_threshold: 0.95
   collect_training_data: true
