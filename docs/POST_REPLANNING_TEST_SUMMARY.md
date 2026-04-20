@@ -68,18 +68,18 @@ Task breakdown:
 ## Interpretation
 
 Post-practice replanning improves adaptive guidance substantially in the validation run.
-Adaptive remains slightly below generic overall, but the gap is much smaller:
+Further compact-guidance refinement made adaptive stronger than generic in two validation runs:
 
 ```text
-generic:  +0.131
-adaptive: +0.112
+generic:  +0.102
+adaptive: +0.135
 ```
 
-For Reading QA, adaptive nearly matches generic:
+For Reading QA, adaptive is also strongest:
 
 ```text
 generic reading:  +0.184
-adaptive reading: +0.174
+adaptive reading: +0.235
 ```
 
-PPT-safe conclusion: two-stage adaptive replanning makes personalization more competitive while preserving the controlled pre/post evaluation design.
+PPT-safe conclusion: two-stage adaptive replanning plus compact personalized guidance makes adaptive guidance the strongest mode in the latest prototype runs while preserving the controlled pre/post evaluation design.

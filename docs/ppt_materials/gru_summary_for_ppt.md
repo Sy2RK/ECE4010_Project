@@ -2,7 +2,7 @@
 
 ## PPT Short Version
 
-The project includes a local PyTorch GRU triage model in the Reading QA evaluation path. It predicts whether a gray-zone reading answer can safely skip the LLM judge. In the latest default runs, it reduced judge calls from 71 to 15 per run, saving 56 calls or 78.87%.
+The project includes a local PyTorch GRU triage model in the Reading QA evaluation path. It predicts whether a gray-zone reading answer can safely skip the LLM judge. In the latest default runs, it reduced judge calls from 69 to 12 per run, saving 57 calls or 82.61%.
 
 ## Where GRU Sits
 
@@ -35,11 +35,11 @@ The GRU does not read raw passages directly. It consumes structured feature sequ
 
 | metric | value |
 | --- | ---: |
-| triage candidates | 71 |
-| GRU predictions | 71 |
-| judge calls after GRU | 15 |
-| skipped judge calls | 56 |
-| judge-call reduction | 78.87% |
+| triage candidates | 69 |
+| GRU predictions | 69 |
+| judge calls after GRU | 12 |
+| skipped judge calls | 57 |
+| judge-call reduction | 82.61% |
 
 ## Accurate Claim
 
@@ -55,7 +55,7 @@ The core adaptive tutoring loop is driven by learner-state modeling and tutor pl
 
 ### A. Since GRU results are completed
 
-Use it as one slide-level technical highlight: "Local GRU triage reduces judge calls by 78.87% while preserving fallback behavior."
+Use it as one slide-level technical highlight: "Local GRU triage reduces judge calls by 82.61% while preserving fallback behavior."
 
 ### B. Conservative fallback wording
 

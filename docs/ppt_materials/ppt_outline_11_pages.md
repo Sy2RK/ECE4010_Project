@@ -79,7 +79,7 @@ PPT bullets:
 - State update uses task scores and recent error tags to identify weakest skill and top errors.
 - Adaptive plan uses this state to choose focus skill, difficulty, feedback style, and practice tasks.
 - GRU triage is enabled in Reading QA evaluation to skip high-confidence LLM judge calls.
-- Latest runs: judge calls reduced from 71 to 15 per run, saving 56 calls.
+- Latest runs: judge calls reduced from 69 to 12 per run, saving 57 calls.
 
 Short phrasing: The system combines LLM tutoring with local learner-state modeling and a GRU-based evaluation triage module.
 
@@ -118,13 +118,13 @@ Main table:
 | --- | ---: | ---: | ---: |
 | no_guidance | 0.719 | 0.697 | -0.022 |
 | generic_guidance | 0.719 | 0.821 | 0.102 |
-| adaptive_guidance | 0.719 | 0.780 | 0.061 |
+| adaptive_guidance | 0.719 | 0.854 | 0.135 |
 
 PPT conclusion:
 
 - Guidance improves over no guidance.
-- Adaptive guidance is positive and especially useful for Reading QA.
-- Generic guidance is still stronger overall in the current prototype.
+- Adaptive guidance is strongest in the latest prototype runs.
+- Adaptive gains are especially visible on Reading QA.
 
 Chart suggestion: one simple bar chart of `avg_delta by mode`.
 
@@ -134,9 +134,9 @@ PPT bullets:
 
 - Implemented a full offline adaptive tutoring experiment pipeline.
 - Adaptive guidance improves over no guidance in controlled runs.
-- GRU triage reduces LLM judge calls by 78.87% in Reading QA evaluation.
-- Current limitation: generic guidance still outperforms adaptive overall.
-- Next step: stronger post-practice replanning and larger validation data.
+- GRU triage reduces LLM judge calls by 82.61% in Reading QA evaluation.
+- Current limitation: results are still small-scale and based on simulated learners.
+- Next step: larger validation data and real-user evaluation.
 
 Closing sentence: This prototype demonstrates feasibility: explicit learner state can drive a measurable tutoring loop, while local ML can reduce evaluation cost.
 

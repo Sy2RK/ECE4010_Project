@@ -30,13 +30,13 @@ We build a controlled offline experiment pipeline to test whether explicit learn
 | --- | ---: |
 | no_guidance | -0.022 |
 | generic_guidance | 0.102 |
-| adaptive_guidance | 0.061 |
+| adaptive_guidance | 0.135 |
 
-GRU triage reduced Reading QA judge calls from 71 to 15 per run, saving 56 calls, or 78.87%.
+GRU triage reduced Reading QA judge calls from 69 to 12 per run, saving 57 calls, or 82.61%.
 
 ## Safest Presentation Claim
 
-The prototype demonstrates a complete adaptive tutoring loop and shows that adaptive guidance improves over no guidance in controlled API experiments. However, generic guidance currently performs better overall, so adaptive guidance should not be claimed as the best method yet.
+The prototype demonstrates a complete adaptive tutoring loop. In the latest controlled API runs, adaptive guidance outperforms both no guidance and generic guidance, with the strongest gain on Reading QA. This should still be presented as prototype-scale evidence, not a broad educational claim.
 
 ## 5-Minute Narrative
 
@@ -45,4 +45,4 @@ The prototype demonstrates a complete adaptive tutoring loop and shows that adap
 3. The system models learner state after pretest, generates adaptive plans, runs practice, then compares fixed posttest results.
 4. Results show guidance helps; adaptive guidance is positive versus no guidance.
 5. GRU triage adds a local ML component that reduces expensive LLM judge calls.
-6. Limitations remain: small task set, simulated learners, and generic guidance is still stronger overall.
+6. Limitations remain: small task set, simulated learners, and prototype-scale validation.

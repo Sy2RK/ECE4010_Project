@@ -144,7 +144,8 @@ def test_compact_adaptive_post_guidance_uses_updated_state() -> None:
     assert "Adaptive post-practice guidance:" in guidance
     assert "Updated focus: reading" in guidance
     assert "weakest_skill=reading" in guidance
-    assert "Use only the current passage" in guidance
+    assert "all concrete reasons" in guidance
+    assert "Do not write meta words" in guidance
 
 
 def test_case_selection_is_deterministic_and_score_first() -> None:

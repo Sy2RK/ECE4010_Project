@@ -5,8 +5,8 @@
     "task_type": "reading_qa",
     "mode": "adaptive_guidance",
     "pretest_score": 0.46,
-    "posttest_score": 0.625,
-    "score_delta": 0.165,
+    "posttest_score": 0.853,
+    "score_delta": 0.393,
     "learner_state_summary": {
       "weakest_skill": "reading",
       "top_errors": ["low_keyword_overlap", "missing_key_evidence"],
@@ -17,6 +17,16 @@
         "confidence": 0.401
       }
     },
+    "post_practice_state_summary": {
+      "weakest_skill": "reading",
+      "top_errors": ["low_keyword_overlap", "missing_key_evidence"],
+      "state_vector": {
+        "grammar": 0.35,
+        "vocabulary": 0.332,
+        "reading": 0.306,
+        "confidence": 0.513
+      }
+    },
     "tutoring_plan_summary": {
       "focus_skill": "reading",
       "focus_subskills": ["keyword_identification", "evidence_extraction"],
@@ -24,31 +34,10 @@
       "feedback_style": "step_by_step_hint",
       "practice_tasks": ["r9", "r4"]
     },
-    "feedback_summary": "Feedback repeatedly pointed out missing evidence and asked the learner to underline key passage sentences before answering.",
-    "practice_summary": "Practice tasks scored 0.5 and 1.0, and the post-practice state improved reading from 0.132 to 0.306.",
-    "posttest_change": "Reading QA average improved from 0.46 to 0.625.",
-    "ppt_message": "Adaptive guidance used explicit reading weakness to choose targeted evidence-extraction practice and produced a positive posttest gain."
-  },
-  {
-    "case_id": "generic_stronger_reading",
-    "learner_id": "learner_a",
-    "task_type": "reading_qa",
-    "mode": "generic_guidance",
-    "pretest_score": 0.46,
-    "posttest_score": 0.75,
-    "score_delta": 0.29,
-    "learner_state_summary": {
-      "same_pretest_as_adaptive": true
-    },
-    "tutoring_plan_summary": {
-      "focus_skill": null,
-      "practice_tasks": ["r4", "r9"],
-      "guidance_type": "fixed generic reading checklist"
-    },
-    "feedback_summary": "Generic mode used the same general instruction: read carefully, find key evidence, answer briefly.",
-    "practice_summary": "Fixed practice still improved evidence-focused answers in the posttest.",
-    "posttest_change": "Generic guidance improved learner_a reading from 0.46 to 0.75, higher than adaptive in this case.",
-    "ppt_message": "This case prevents overclaiming: a simple generic checklist can be a strong baseline."
+    "feedback_summary": "Feedback focused on missing evidence, ordering details correctly, and using concrete passage reasons.",
+    "practice_summary": "Practice tasks scored 0.5 and 1.0; post-practice reading state improved from 0.132 to 0.306.",
+    "posttest_change": "Reading QA average improved from 0.46 to 0.853.",
+    "ppt_message": "Adaptive guidance combined a generic reading checklist with learner-specific evidence-extraction focus and produced the strongest gain for this learner-task pair."
   },
   {
     "case_id": "controlled_comparison_same_baseline",
@@ -59,15 +48,32 @@
     "posttest_scores": {
       "no_guidance": 0.375,
       "generic_guidance": 0.75,
-      "adaptive_guidance": 0.625
+      "adaptive_guidance": 0.853
     },
     "score_deltas": {
       "no_guidance": -0.085,
       "generic_guidance": 0.29,
-      "adaptive_guidance": 0.165
+      "adaptive_guidance": 0.393
     },
-    "fairness_summary": "The same learner and same task type started from the same pretest score across all modes.",
-    "practice_summary": "No guidance skipped practice; generic and adaptive both practiced on reserve reading tasks.",
-    "ppt_message": "This case illustrates the controlled comparison design: identical baseline, different intervention, fixed posttest measurement."
+    "fairness_summary": "The same learner and same task type started from the same pretest score across all modes, and all modes used the same fixed posttest bundle.",
+    "practice_summary": "No guidance skipped practice; generic used fixed guidance; adaptive used state-driven practice and post-practice replanning.",
+    "ppt_message": "This case illustrates controlled comparison: identical baseline and posttest, different intervention, interpretable delta."
+  },
+  {
+    "case_id": "honest_boundary_learner_b_reading",
+    "learner_id": "learner_b",
+    "task_type": "reading_qa",
+    "modes_compared": ["generic_guidance", "adaptive_guidance"],
+    "pretest_score_all_modes": 0.723,
+    "posttest_scores": {
+      "generic_guidance": 0.853,
+      "adaptive_guidance": 0.825
+    },
+    "score_deltas": {
+      "generic_guidance": 0.13,
+      "adaptive_guidance": 0.102
+    },
+    "interpretation": "Adaptive remains positive but does not beat generic in this specific learner-task pair.",
+    "ppt_message": "Adaptive is best on average in the latest validation runs, but not every subcase is a win; the claim should stay prototype-scoped."
   }
 ]

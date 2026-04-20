@@ -89,14 +89,15 @@ def build_compact_adaptive_post_guidance(
     top_errors = ", ".join(learner_state.recent_error_summary.top_errors[:2]) or "none"
     if task_type == "grammar_correction":
         directive = (
-            "Correct only the current sentence. Re-check agreement, tense, articles, "
-            "pronouns, and prepositions before answering."
+            "Before answering, check tense, articles, subject-verb agreement, word order, and prepositions. "
+            "Because your recent errors were personalized as above, preserve all original details and make the minimum necessary corrections."
         )
         answer_format = "Return one corrected sentence only."
     else:
         directive = (
-            "Use only the current passage. Include the full reason or evidence chain "
-            "asked by the current question."
+            "Read the current passage carefully and answer in one short English sentence. "
+            "Because your recent errors were missing evidence, include all concrete reasons from the current passage. "
+            "Do not write meta words such as evidence, checklist, or passage in the answer."
         )
         answer_format = "Answer in one short English sentence."
     return "\n".join(
