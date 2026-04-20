@@ -1,0 +1,11 @@
+# Main Results Table
+
+Source runs: `outputs/sample_api_run_23`, `outputs/sample_api_run_24`, `outputs/sample_api_run_25`.
+
+| mode | avg_pretest_score | avg_posttest_score | avg_delta | sample_count | std_delta | grammar_delta | reading_delta |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| no_guidance | 0.719 | 0.697 | -0.022 | 18 | 0.042 | -0.027 | -0.017 |
+| generic_guidance | 0.719 | 0.821 | 0.102 | 18 | 0.117 | 0.020 | 0.184 |
+| adaptive_guidance | 0.719 | 0.780 | 0.061 | 18 | 0.105 | -0.004 | 0.125 |
+
+PPT-safe takeaway: adaptive guidance improves over no guidance, especially on Reading QA, but generic guidance is currently higher overall.
