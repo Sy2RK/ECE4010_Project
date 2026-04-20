@@ -10,6 +10,8 @@ import adaptive_tutor.runner as runner_module
 from adaptive_tutor.reporting import load_run_artifacts
 from adaptive_tutor.runner import ExperimentRunner
 from adaptive_tutor.runner import run_experiment
+from adaptive_tutor.planning import heuristic_tutoring_plan
+from adaptive_tutor.prompts import build_compact_adaptive_post_guidance
 from adaptive_tutor.schemas import InteractionRecord, LearnerState, RecentErrorSummary, StateVector
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,9 +44,13 @@ def test_mock_runner_creates_reproducible_artifacts(tmp_path: Path) -> None:
     assert (run_dir / "report.md").exists()
 
     assert len(artifacts.metrics) == 18
-    assert len(artifacts.plans) == 6
+    assert len(artifacts.plans) == 12
     assert len(artifacts.cases) >= 2
-    assert all(plan.recommended_task_ids for plan in artifacts.plans)
+    round1_plans = [plan for plan in artifacts.plans if plan.round_index == 1]
+    round2_plans = [plan for plan in artifacts.plans if plan.round_index == 2]
+    assert len(round1_plans) == 6
+    assert len(round2_plans) == 6
+    assert all(plan.recommended_task_ids for plan in round1_plans)
 
     grouped_pre = {}
     grouped_post = {}
@@ -110,17 +116,35 @@ def test_adaptive_post_guidance_uses_sanitized_practice_outcome() -> None:
     guidance = ExperimentRunner._compose_post_guidance(
         "adaptive_guidance",
         "reading_qa",
-        "Adaptive guidance:",
+        "Adaptive post-practice guidance:\nUse only the current passage.",
         [practice_record],
         state,
     )
 
-    assert "Practice average score: 0.50" in guidance
-    assert "Practice feedback lesson 1: score 0.50" in guidance
+    assert "Practice outcome: avg_score=0.50" in guidance
     assert "missing_key_evidence" in guidance
-    assert "Weakest skill after practice: reading." in guidance
-    assert "use only the current passage" in guidance
+    assert "weakest_skill_after_practice=reading" in guidance
+    assert "Use only the current passage" in guidance
     assert "Survey answer" not in guidance
+
+
+def test_compact_adaptive_post_guidance_uses_updated_state() -> None:
+    state = LearnerState(
+        learner_id="learner_a",
+        state_vector=StateVector(grammar=0.4, vocabulary=0.4, reading=0.3, confidence=0.5),
+        recent_error_summary=RecentErrorSummary(
+            top_errors=["low_keyword_overlap", "missing_key_evidence"],
+            weakest_skill="reading",
+        ),
+    )
+    plan = heuristic_tutoring_plan(state, "reading_qa")
+
+    guidance = build_compact_adaptive_post_guidance("reading_qa", plan, state)
+
+    assert "Adaptive post-practice guidance:" in guidance
+    assert "Updated focus: reading" in guidance
+    assert "weakest_skill=reading" in guidance
+    assert "Use only the current passage" in guidance
 
 
 def test_case_selection_is_deterministic_and_score_first() -> None:

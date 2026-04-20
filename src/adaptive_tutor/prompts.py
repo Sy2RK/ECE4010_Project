@@ -80,6 +80,40 @@ def build_adaptive_guidance(task_type: TaskType, tutoring_plan: TutoringPlan) ->
     )
 
 
+def build_compact_adaptive_post_guidance(
+    task_type: TaskType,
+    tutoring_plan: TutoringPlan,
+    learner_state: LearnerState,
+) -> str:
+    subskills = ", ".join(tutoring_plan.focus_subskills[:2])
+    top_errors = ", ".join(learner_state.recent_error_summary.top_errors[:2]) or "none"
+    if task_type == "grammar_correction":
+        directive = (
+            "Correct only the current sentence. Re-check agreement, tense, articles, "
+            "pronouns, and prepositions before answering."
+        )
+        answer_format = "Return one corrected sentence only."
+    else:
+        directive = (
+            "Use only the current passage. Include the full reason or evidence chain "
+            "asked by the current question."
+        )
+        answer_format = "Answer in one short English sentence."
+    return "\n".join(
+        [
+            "Adaptive post-practice guidance:",
+            f"Updated focus: {tutoring_plan.focus_skill}: {subskills}.",
+            (
+                "Updated learner state: "
+                f"weakest_skill={learner_state.recent_error_summary.weakest_skill}; "
+                f"recent_errors={top_errors}."
+            ),
+            directive,
+            answer_format,
+        ]
+    )
+
+
 def build_tutor_plan_messages(
     learner_state: LearnerState,
     task_type: TaskType,

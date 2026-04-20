@@ -400,15 +400,16 @@ The learner model used at runtime is resolved in this order:
 - per-item feedback is recorded
 - next practice tasks are recommended
 - recommended practice tasks are answered and scored before posttest
-- practice feedback is summarized into the posttest prompt
-- compact adaptive guidance is passed into posttest
+- learner state is updated again after practice
+- a second, post-practice tutor plan is generated
+- compact post-practice guidance is passed into posttest
 
 The intermediate practice phase is deliberately non-scored for experiment metrics.
 `round1_score`, `round2_score`, and `score_delta` still come only from fixed pretest
 and fixed posttest bundles. Practice exists to make guidance operational in a
-stateless LLM setup: the system must pass a compact summary of practice feedback
-into the subsequent learner prompt, otherwise separate API calls would not share
-learning context.
+stateless LLM setup. Adaptive mode now performs a two-stage plan: one plan chooses
+practice, and a second plan uses the post-practice learner state to produce compact
+posttest guidance.
 
 ## 8. Experiment Artifacts
 

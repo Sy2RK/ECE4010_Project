@@ -22,6 +22,7 @@ from adaptive_tutor.next_task import recommend_tasks
 from adaptive_tutor.planning import generate_tutoring_plan
 from adaptive_tutor.prompts import (
     build_adaptive_guidance,
+    build_compact_adaptive_post_guidance,
     build_generic_guidance,
     build_judge_messages,
     build_learner_system_prompt,
@@ -232,57 +233,22 @@ class ExperimentRunner:
                     for error_tag in record.error_tags
                 }
             )
-            state_lines: list[str] = []
-            if post_practice_state:
-                state_lines = [
-                    (
-                        "Weakest skill after practice: "
-                        f"{post_practice_state.recent_error_summary.weakest_skill}."
-                    ),
-                    (
-                        "Recurring error tags after practice: "
-                        f"{', '.join(post_practice_state.recent_error_summary.top_errors) or 'none'}."
-                    ),
-                ]
-            lesson_lines = []
-            for index, record in enumerate(practice_records[:2], start=1):
-                errors = ", ".join(record.error_tags[:3]) or "none"
-                if task_type == "reading_qa":
-                    lesson = (
-                        f"Practice feedback lesson {index}: score {record.score:.2f}; "
-                        f"errors {errors}; for the next answer, include all required evidence "
-                        "from the current passage only."
-                    )
-                else:
-                    lesson = (
-                        f"Practice feedback lesson {index}: score {record.score:.2f}; "
-                        f"errors {errors}; for the next answer, re-check the current sentence "
-                        "for the same error categories."
-                    )
-                lesson_lines.append(lesson)
+            weakest_skill = (
+                post_practice_state.recent_error_summary.weakest_skill
+                if post_practice_state
+                else "unknown"
+            )
             practice_lines = [
-                "Adaptive practice outcome summary. Use this as learning history, not as task content:",
-                f"Practice average score: {avg_practice_score:.2f}.",
-                f"Practice error tags: {', '.join(practice_error_tags[:5]) or 'none'}.",
-                *state_lines,
-                *lesson_lines,
+                "Practice outcome: "
+                f"avg_score={avg_practice_score:.2f}; "
+                f"weakest_skill_after_practice={weakest_skill}; "
+                f"observed_errors={', '.join(practice_error_tags[:3]) or 'none'}.",
+                "Do not copy names, answers, or details from practice tasks.",
             ]
-            if task_type == "reading_qa":
-                practice_summary = (
-                    "For the next Reading QA item, use only the current passage, do not "
-                    "reuse names or details from earlier practice tasks, and include the "
-                    "full cause/evidence chain required by the current question."
-                )
-            else:
-                practice_summary = (
-                    "For the next Grammar Correction item, correct every grammar issue in the current sentence, "
-                    "especially agreement, pronouns, tense, articles, and prepositions."
-                )
             return "\n\n".join(
                 [
                     base_guidance,
                     "\n".join(practice_lines),
-                    practice_summary,
                 ]
             )
         if mode == "generic_guidance":
@@ -357,7 +323,9 @@ class ExperimentRunner:
                     post_ids = self.bundles.bundle_definitions[assignment.posttest_bundle]
                     tracker = LearnerModeler(learner)
                     adaptive_plan = None
+                    posttest_plan = None
                     recommended_tasks: list[Task] = []
+                    post_practice_recommended_tasks: list[Task] = []
                     phase_feedback: list[FeedbackRecord] = []
                     pretest_records: list[InteractionRecord] = []
                     pretest_evaluations: dict[str, EvaluationResult] = {}
@@ -542,6 +510,42 @@ class ExperimentRunner:
                         phase_feedback.append(feedback_record)
 
                     post_practice_state = tracker.snapshot() if practice_records else None
+                    if mode == "adaptive_guidance" and adaptive_plan and post_practice_state:
+                        posttest_plan = generate_tutoring_plan(
+                            backend=self.backend,
+                            model=self.config.models.tutor_model,
+                            learner_state=post_practice_state,
+                            task_type=task_type,
+                            seed=self.config.seed if self.config.generation.use_seed else None,
+                            temperature=self.config.generation.tutor_temperature,
+                        )
+                        excluded_ids = {
+                            *pre_ids,
+                            *post_ids,
+                            *(record.task_id for record in practice_records),
+                        }
+                        post_practice_recommended_tasks = recommend_tasks(
+                            self.tasks,
+                            posttest_plan,
+                            excluded_ids,
+                        )
+                        plan_record = PlanRecord(
+                            learner_id=learner_id,
+                            task_type=task_type,
+                            guidance_mode=mode,
+                            round_index=2,
+                            tutoring_plan=posttest_plan,
+                            recommended_task_ids=[
+                                task.task_id for task in post_practice_recommended_tasks
+                            ],
+                        )
+                        plans.append(plan_record)
+                        append_jsonl(run_dir / "plans.jsonl", plan_record)
+                        guidance_text = build_compact_adaptive_post_guidance(
+                            task_type,
+                            posttest_plan,
+                            post_practice_state,
+                        )
                     guidance_text = self._compose_post_guidance(
                         mode,
                         task_type,
@@ -559,7 +563,11 @@ class ExperimentRunner:
                             mode,
                             phase="posttest",
                             guidance_text=guidance_text,
-                            focus_skill=adaptive_plan.focus_skill if adaptive_plan else None,
+                            focus_skill=(
+                                posttest_plan.focus_skill
+                                if posttest_plan
+                                else adaptive_plan.focus_skill if adaptive_plan else None
+                            ),
                         )
                         evaluation = self._score_answer(task, answer)
                         training_row = self._triage_training_row(
@@ -625,7 +633,13 @@ class ExperimentRunner:
                                     else None
                                 ),
                                 "tutoring_plan": adaptive_plan.model_dump(),
+                                "post_practice_tutoring_plan": (
+                                    posttest_plan.model_dump() if posttest_plan else None
+                                ),
                                 "recommended_task_ids": [task.task_id for task in recommended_tasks],
+                                "post_practice_recommended_task_ids": [
+                                    task.task_id for task in post_practice_recommended_tasks
+                                ],
                                 "feedback_excerpt": phase_feedback[0].feedback_text,
                                 "pretest_examples": [record.model_dump() for record in pretest_records],
                                 "practice_examples": [
